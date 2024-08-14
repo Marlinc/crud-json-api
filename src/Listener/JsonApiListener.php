@@ -5,6 +5,7 @@ namespace CrudJsonApi\Listener;
 
 use Cake\Collection\CollectionInterface;
 use Cake\Datasource\EntityInterface;
+use Cake\Datasource\Paging\PaginatedInterface;
 use Cake\Datasource\RepositoryInterface;
 use Cake\Datasource\ResultSetDecorator;
 use Cake\Datasource\ResultSetInterface;
@@ -46,7 +47,7 @@ class JsonApiListener extends ApiListener
      *
      * @var array
      */
-    protected $_defaultConfig = [
+    protected array $_defaultConfig = [
         'detectors' => [
             'jsonapi' => ['ext' => false, 'accept' => [self::MIME_TYPE]],
         ],
@@ -881,7 +882,7 @@ class JsonApiListener extends ApiListener
      */
     protected function _renderWithResources(Subject $subject): Response
     {
-        $repository = $this->_controller()->loadModel(); // Default model class
+        $repository = $this->_controller()->fetchTable(); // Default model class
 
         $usedAssociations = [];
         if (isset($subject->query)) {
@@ -1068,6 +1069,16 @@ class JsonApiListener extends ApiListener
         }
 
         if (!empty($subject->entities) && $subject->entities instanceof ResultSetInterface) {
+            if ($subject->entities->first() === null) {
+                $repository = $subject->query->getRepository();
+                $entity = $repository->getEntityClass();
+
+                return new $entity();
+            }
+
+            return $subject->entities->first();
+        }
+        if (!empty($subject->entities) && $subject->entities instanceof PaginatedInterface) {
             if ($subject->entities->first() === null) {
                 $repository = $subject->query->getRepository();
                 $entity = $repository->getEntityClass();
